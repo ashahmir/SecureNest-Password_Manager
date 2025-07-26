@@ -2,6 +2,7 @@ from tkinter import *
 from tkinter import messagebox
 import random
 import pyperclip
+import json
 
 
 def generate_password():
@@ -31,7 +32,7 @@ window.config(padx=50, pady=50)
 
 
 def add_entry():
-    website = website_input.get()
+    website = website_input.get().title()
     email = email_input.get()
     _pass = pass_input.get()
 
@@ -41,12 +42,42 @@ def add_entry():
         info_confirmed = messagebox.askokcancel(title=website, message=f"Confirm Details\nEmail: "f"{email}\nPassword"
                                                                        f": {_pass}")
         if info_confirmed:
-            with open("data.txt", "a") as file:
-                file.write(website + " | " + email + " | " + _pass + '\n')
-            website_input.delete(0, END)
-            email_input.delete(0, END)
-            pass_input.delete(0, END)
-            website_input.focus()
+            new_entry = {
+                website: {
+                    "email": email,
+                    "password": _pass,
+                }
+
+            }
+            try:
+                with open("data.json", "r") as file:
+                    data = json.load(file)
+            except FileNotFoundError:
+                with open("data.json", "w") as file:
+                    json.dump(new_entry, file, indent=4)
+            else:
+                data.update(new_entry)
+                with open("data.json", "w") as file:
+                    json.dump(data, file, indent=4)
+            finally:
+                website_input.delete(0, END)
+                email_input.delete(0, END)
+                pass_input.delete(0, END)
+                website_input.focus()
+
+
+def search_entry():
+    try:
+        with open("data.json", "r") as file:
+            data = json.load(file)
+            try:
+                searched_email = data[website_input.get().title()]["email"]
+                searched_password = data[website_input.get().title()]["password"]
+                messagebox.showinfo(title=website_input.get().title(), message=f"Email: {searched_email}\nPassword: {searched_password}")
+            except KeyError:
+                messagebox.showerror(message=f"Entry for {website_input.get().title()} doesn't exist in the directory", title="Invalid Website")
+    except FileNotFoundError:
+        messagebox.showerror(message="No Data File Found")
 
 
 canvas = Canvas(height=240, width=842)
@@ -57,8 +88,8 @@ canvas.grid(column=1, columnspan=3, row=1, pady=(50, 80))
 website_label = Label(text="Website:", font=("Ariel", 15))
 website_label.grid(column=1, row=2, padx=(150, 0))
 
-website_input = Entry(width=70)
-website_input.grid(column=2, row=2, columnspan=2, padx=(0, 120))
+website_input = Entry(width=40)
+website_input.grid(column=2, row=2, columnspan=2, padx=(0, 300))
 website_input.focus()
 
 email_label = Label(text="Email/username:", font=("Ariel", 15))
@@ -78,5 +109,8 @@ generate_pass_button.grid(column=3, row=4, padx=(0, 170))
 
 add_entry_button = Button(text="Add Entry", width=60, command=add_entry)
 add_entry_button.grid(column=2, row=5, columnspan=2, pady=20, padx=(0, 120))
+
+search_entry_button = Button(text="Search 🔍", command=search_entry)
+search_entry_button.grid(column=3, row=2, sticky="w", padx=(10,0))
 
 window.mainloop()
